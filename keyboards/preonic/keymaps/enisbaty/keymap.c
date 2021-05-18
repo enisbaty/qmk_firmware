@@ -22,6 +22,12 @@ enum preonic_layers {
   _RAISE,
 };
 
+enum my_keycodes {
+    RLI_TOG = SAFE_RANGE,
+};
+
+bool raiseLowerToggle = true;
+
 #define LOWER MO(_LOWER)
 #define RAISE MO(_RAISE)
 
@@ -76,9 +82,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * ,-----------------------------------------------------------------------------------.
  * |  `   |XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|
  * |------+------+------+------+------+-------------+------+------+------+------+------|
- * |RGBTOG|RGBVAD|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|
+ * |RGBTOG|RLITOG|RGBVAD|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|XXXXXX|
  * |------+------+------+------+------+-------------+------+------+------+------+------|
- * |XXXXXX|  !   |  @   |  #   |  $   |  %   |  ^   |   &  |   *  |  (   |   )  | Ent  |
+ * |CAPSLK|  !   |  @   |  #   |  $   |  %   |  ^   |   &  |   *  |  (   |   )  | Ent  |
  * |------+------+------+------+------+------|------+------+------+------+------+------|
  * |      |  _   |  +   |  {   |  }   |PAUSE | PGDN | END  |XXXXXX|XXXXXX|XXXXXX|  \   |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
@@ -87,7 +93,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
 [_LOWER] = LAYOUT_preonic_grid( \
     KC_GRV , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-    RGB_TOG, RGB_VAD, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    RGB_TOG, RLI_TOG, RGB_VAD, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     KC_CAPS, KC_EXLM, KC_AT  , KC_HASH, KC_DLR , KC_PERC, KC_CIRC, KC_AMPR, KC_ASTR, KC_LPRN, KC_RPRN, KC_ENT ,
     _______, KC_UNDS, KC_PLUS, KC_LCBR, KC_RCBR, KC_PAUS, KC_PGDN, KC_END , XXXXXXX, XXXXXXX, XXXXXXX, KC_BSLS,
     _______, _______, _______, _______, XXXXXXX, _______, _______, XXXXXXX, KC_MPRV, KC_VOLD, KC_MSTP, _______
@@ -104,22 +110,41 @@ void keyboard_post_init_user(void) {
     rgblight_reload_from_eeprom();
 }
 
+// Called for custom keycodes
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch(keycode) {
+        case RLI_TOG:
+            if (record->event.pressed) {
+                // Toggle raise/lower indicator bool
+                raiseLowerToggle = !raiseLowerToggle;
+                
+                // Load LED state from eeprom
+                rgblight_reload_from_eeprom();
+            }
+            return false; // Skip further processing
+        default:
+            return true; // Process all other keycodes normally
+    }
+}
+
 // Called upon a layer change
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // Switch on layers
-    switch (get_highest_layer(state)) {
-        case _RAISE:
-            // Set LED in front of RAISE to dim orange
-            rgblight_setrgb_at(23,11,0,8);
-            break;
-        case _LOWER:
-            // Set LED in front of LOWER to dim blue
-            rgblight_setrgb_at(12,18,16,1);
-            break;
-        default: //  for any other layers, or the default layer
-            rgblight_reload_from_eeprom();
-            break;
-        }
+    // Load LED state from eeprom
+    rgblight_reload_from_eeprom();
+
+    // Switch on layers if raiseLowerToggle is true
+    if(raiseLowerToggle) {
+        switch (get_highest_layer(state)) {
+            case _RAISE:
+                // Set LED in front of RAISE to dim orange
+                rgblight_setrgb_at(23,11,0,8);
+                break;
+            case _LOWER:
+                // Set LED in front of LOWER to dim blue
+                rgblight_setrgb_at(12,18,16,1);
+                break;
+       }
+    }
 
     // Handle caps lock state
     if (host_keyboard_leds() & (1<<USB_LED_CAPS_LOCK)) {
