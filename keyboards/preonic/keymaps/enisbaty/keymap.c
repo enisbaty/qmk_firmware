@@ -110,11 +110,11 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     switch (get_highest_layer(state)) {
         case _RAISE:
             // Set LED in front of RAISE to dim orange
-            rgblight_setrgb_at(32,16,0,8);
+            rgblight_setrgb_at(23,11,0,8);
             break;
         case _LOWER:
             // Set LED in front of LOWER to dim blue
-            rgblight_setrgb_at(35,45,50,1);
+            rgblight_setrgb_at(12,18,16,1);
             break;
         default: //  for any other layers, or the default layer
             rgblight_reload_from_eeprom();
