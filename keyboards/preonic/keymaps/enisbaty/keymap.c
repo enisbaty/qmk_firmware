@@ -16,6 +16,16 @@
 
 #include QMK_KEYBOARD_H
 
+// Setup EEPROM storage
+typedef union {
+    uint32_t raw;
+    struct {
+        bool    rli_toggle : 1;
+    };
+} user_config_t;
+
+user_config_t user_config;
+
 enum preonic_layers {
   _QWERTY,
   _LOWER,
@@ -25,8 +35,6 @@ enum preonic_layers {
 enum my_keycodes {
     RLI_TOG = SAFE_RANGE,
 };
-
-bool raiseLowerToggle = true;
 
 #define LOWER MO(_LOWER)
 #define RAISE MO(_RAISE)
@@ -129,7 +137,24 @@ const rgblight_segment_t* const PROGMEM LED_layers[] = RGBLIGHT_LAYERS_LIST(
 void keyboard_post_init_user(void) {
     // Enable the LED layers
     rgblight_layers = LED_layers;
+
+    // Read user config from EEPROM
+    user_config.raw = eeconfig_read_user();
 }
+
+void eeconfig_init_user(void) { // EEPROM is getting reset!
+    // Set default values
+    user_config.raw = 0;
+    user_config.rli_toggle = true;
+    
+    // Write to EEPROM
+    eeconfig_update_user(user_config.raw);
+
+    // Enable lighting and set default lighting color
+    rgblight_enable();
+    rgblight_sethsv(HSV_WHITE);
+}
+
 
 bool led_update_user(led_t led_state) {
     rgblight_set_layer_state(0, led_state.caps_lock);
@@ -141,10 +166,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case RLI_TOG:
             if (record->event.pressed) {
                 // Toggle raise/lower indicator bool
-                raiseLowerToggle = !raiseLowerToggle;
+                user_config.rli_toggle = !user_config.rli_toggle;
+
+                // Write to EEPROM
+                eeconfig_update_user(user_config.raw);
                 
                 // Turn off indicator layers if on
-                if(!raiseLowerToggle)
+                if(!user_config.rli_toggle)
                 {
                     rgblight_set_layer_state(1, false);
                     rgblight_set_layer_state(2, false);
@@ -157,7 +185,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
-    if(raiseLowerToggle)
+    if(user_config.rli_toggle)
     {
         rgblight_set_layer_state(1, layer_state_cmp(state, _RAISE));
         rgblight_set_layer_state(2, layer_state_cmp(state, _LOWER));
