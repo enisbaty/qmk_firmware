@@ -101,25 +101,47 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 };
 
+// RGBLIGHT layers definitions
+
+// Light top left LED for caps lock indicator
+const rgblight_segment_t PROGMEM capslock_LED_layer[] = RGBLIGHT_LAYER_SEGMENTS(
+    {6, 1, HSV_GREEN}
+);
+
+// Light LED under raise key to indicate raise layer
+const rgblight_segment_t PROGMEM raise_LED_layer[] = RGBLIGHT_LAYER_SEGMENTS(
+    {8, 1, 25, 225, 100}
+);
+
+// Light LED under lower key to indicate lower layer
+const rgblight_segment_t PROGMEM lower_LED_layer[] = RGBLIGHT_LAYER_SEGMENTS(
+    {1, 1, 160, 60, 115}
+);
+
+// Now define the array of layers. Later layers take precedence
+const rgblight_segment_t* const PROGMEM LED_layers[] = RGBLIGHT_LAYERS_LIST(
+    capslock_LED_layer,
+    raise_LED_layer,    // Overrides caps lock layer
+    lower_LED_layer    // Overrides other layers
+);
+
 // Called post keyboard init on boot
 void keyboard_post_init_user(void) {
-    // Set RGB to full white
-    //rgblight_sethsv(0,0,255);
-
-    // Read RGB from EEPROM
-    rgblight_reload_from_eeprom();
+    // Enable the LED layers
+    rgblight_layers = LED_layers;
 }
 
-// Called for custom keycodes
+bool led_update_user(led_t led_state) {
+    rgblight_set_layer_state(0, led_state.caps_lock);
+    return true;
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch(keycode) {
         case RLI_TOG:
             if (record->event.pressed) {
                 // Toggle raise/lower indicator bool
                 raiseLowerToggle = !raiseLowerToggle;
-                
-                // Load LED state from eeprom
-                rgblight_reload_from_eeprom();
             }
             return false; // Skip further processing
         default:
@@ -127,31 +149,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
-// Called upon a layer change
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // Load LED state from eeprom
-    rgblight_reload_from_eeprom();
-
-    // Switch on layers if raiseLowerToggle is true
-    if(raiseLowerToggle) {
-        switch (get_highest_layer(state)) {
-            case _RAISE:
-                // Set LED in front of RAISE to dim orange
-                rgblight_setrgb_at(23,11,0,8);
-                break;
-            case _LOWER:
-                // Set LED in front of LOWER to dim blue
-                rgblight_setrgb_at(12,18,16,1);
-                break;
-       }
+    if(raiseLowerToggle)
+    {
+        rgblight_set_layer_state(1, layer_state_cmp(state, _RAISE));
+        rgblight_set_layer_state(2, layer_state_cmp(state, _LOWER));
     }
-
-    // Handle caps lock state
-    if (host_keyboard_leds() & (1<<USB_LED_CAPS_LOCK)) {
-        // Set LED in middle of board to green for caps lock
-        rgblight_setrgb_at(0,255,0,6);
-    }
-
     return state;
 }
 
