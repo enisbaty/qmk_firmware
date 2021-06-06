@@ -142,6 +142,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 // Toggle raise/lower indicator bool
                 raiseLowerToggle = !raiseLowerToggle;
+                
+                // Turn off indicator layers if on
+                if(!raiseLowerToggle)
+                {
+                    rgblight_set_layer_state(1, false);
+                    rgblight_set_layer_state(2, false);
+                }
             }
             return false; // Skip further processing
         default:
