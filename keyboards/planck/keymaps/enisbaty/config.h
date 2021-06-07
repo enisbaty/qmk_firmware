@@ -1,0 +1,5 @@
+#pragma once
+
+#undef RGBLIGHT_ANIMATIONS
+#define RGBLIGHT_LAYERS
+#define RGBLIGHT_SLEEP
